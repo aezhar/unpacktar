@@ -33,6 +33,13 @@ func applyModesNode(n *modeCacheNode) error {
 		return nil
 	}
 
+	if mode := n.header.FileInfo().Mode(); mode.Type() != fs.ModeSymlink {
+		err := unix.Chmod(n.fullPath, uint32(mode.Perm()))
+		if err != nil {
+			return err
+		}
+	}
+
 	atime := time.Now()
 	if hasPAXHeader(n, "atime") {
 		atime = n.header.AccessTime
@@ -45,13 +52,6 @@ func applyModesNode(n *modeCacheNode) error {
 	})
 	if err != nil {
 		return err
-	}
-
-	if mode := n.header.FileInfo().Mode(); mode.Type() != fs.ModeSymlink {
-		err = unix.Chmod(n.fullPath, uint32(mode.Perm()))
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

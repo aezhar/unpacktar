@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/sys/unix"
 )
@@ -38,10 +39,14 @@ func unpackBlockCharFifo(h *tar.Header, path string) error {
 	return unix.Mknod(path, mode, int(unix.Mkdev(uint32(h.Devmajor), uint32(h.Devminor))))
 }
 
-func unpackPlatformSpecific(h *tar.Header, fullPath string) error {
+func unpackPlatformSpecific(target string, h *tar.Header, fullPath string) error {
 	switch h.Typeflag {
 	case tar.TypeLink:
-		return os.Link(h.Linkname, fullPath)
+		linkName := h.Linkname
+		if !filepath.IsAbs(linkName) {
+			linkName = filepath.Join(target, linkName)
+		}
+		return os.Link(linkName, fullPath)
 	case tar.TypeChar, tar.TypeBlock, tar.TypeFifo:
 		return unpackBlockCharFifo(h, fullPath)
 	default:

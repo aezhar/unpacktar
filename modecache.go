@@ -17,6 +17,7 @@ package unpacktar
 import (
 	"archive/tar"
 	"errors"
+	"fmt"
 	"path"
 	"path/filepath"
 )
@@ -70,7 +71,11 @@ func applyModesNodes(mc *modeCache, n *modeCacheNode) error {
 		}
 	}
 
-	return applyModesNode(n)
+	if err := applyModesNode(n); err != nil {
+		return fmt.Errorf("unpack/applyMode: %q: %w", n.fullPath, err)
+	}
+
+	return nil
 }
 
 func applyModes(mc *modeCache) error {

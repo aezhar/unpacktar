@@ -17,7 +17,10 @@
 package unpacktar
 
 import (
+	"errors"
 	"io/fs"
+	"os/user"
+	"strconv"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -26,6 +29,40 @@ import (
 func hasPAXHeader(n *modeCacheNode, name string) (has bool) {
 	_, has = n.header.PAXRecords[name]
 	return
+}
+
+func applyUidGid(n *modeCacheNode) error {
+	uid, gid := n.header.Uid, n.header.Gid
+	if n.header.Uname != "" {
+		u, err := user.Lookup(n.header.Uname)
+		if err != nil {
+			return err
+		}
+
+		uid, err = strconv.Atoi(u.Uid)
+		if err != nil {
+			return err
+		}
+	}
+
+	if n.header.Gname != "" {
+		g, err := user.LookupGroup(n.header.Gname)
+		if err != nil {
+			return err
+		}
+
+		gid, err = strconv.Atoi(g.Gid)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := unix.Lchown(n.fullPath, uid, gid)
+	if err != nil && !errors.Is(err, fs.ErrPermission) {
+		return err
+	}
+
+	return nil
 }
 
 func applyModesNode(n *modeCacheNode) error {
@@ -38,6 +75,10 @@ func applyModesNode(n *modeCacheNode) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if err := applyUidGid(n); err != nil {
+		return err
 	}
 
 	atime := time.Now()

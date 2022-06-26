@@ -19,10 +19,31 @@ package unpacktar
 import (
 	"archive/tar"
 	"fmt"
+	"os"
+
+	"golang.org/x/sys/unix"
 )
 
-func unpackPlatformSpecific(h *tar.Header) error {
+func unpackBlockCharFifo(h *tar.Header, path string) error {
+	mode := uint32(h.Mode & 07777)
 	switch h.Typeflag {
+	case tar.TypeBlock:
+		mode |= unix.S_IFBLK
+	case tar.TypeChar:
+		mode |= unix.S_IFCHR
+	case tar.TypeFifo:
+		mode |= unix.S_IFIFO
+	}
+
+	return unix.Mknod(path, mode, int(unix.Mkdev(uint32(h.Devmajor), uint32(h.Devminor))))
+}
+
+func unpackPlatformSpecific(h *tar.Header, fullPath string) error {
+	switch h.Typeflag {
+	case tar.TypeLink:
+		return os.Link(h.Linkname, fullPath)
+	case tar.TypeChar, tar.TypeBlock, tar.TypeFifo:
+		return unpackBlockCharFifo(h, fullPath)
 	default:
 		return fmt.Errorf("%x: %w", h.Typeflag, ErrUnsupportedType)
 	}

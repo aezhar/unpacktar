@@ -65,7 +65,7 @@ func To(r io.Reader, target string) error {
 		case tar.TypeSymlink:
 			err = os.Symlink(h.Linkname, fullPath)
 		default:
-			err = unpackPlatformSpecific(h)
+			err = unpackPlatformSpecific(h, fullPath)
 		}
 		if err != nil {
 			return fmt.Errorf("unpack: %q: %w", fullPath, err)

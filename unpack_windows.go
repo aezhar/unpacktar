@@ -21,7 +21,7 @@ import (
 	"fmt"
 )
 
-func unpackPlatformSpecific(h *tar.Header) error {
+func unpackPlatformSpecific(h *tar.Header, fullPath string) error {
 	switch h.Typeflag {
 	default:
 		return fmt.Errorf("%x: %w", h.Typeflag, ErrUnsupportedType)

@@ -17,6 +17,7 @@
 package unpacktar
 
 import (
+	"io/fs"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -46,9 +47,11 @@ func applyModesNode(n *modeCacheNode) error {
 		return err
 	}
 
-	err = unix.Chmod(n.fullPath, uint32(n.header.FileInfo().Mode().Perm()))
-	if err != nil {
-		return err
+	if mode := n.header.FileInfo().Mode(); mode.Type() != fs.ModeSymlink {
+		err = unix.Chmod(n.fullPath, uint32(mode.Perm()))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
